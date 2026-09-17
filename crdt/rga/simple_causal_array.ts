@@ -1,5 +1,5 @@
-import { OutOfOrderError } from "../causality.exception"
-import { UnexpectedInternalError } from "../operation.exception"
+import { OutOfOrderError } from "../causality.exception.ts"
+import { UnexpectedInternalError } from "../operation.exception.ts"
 
 /** REMOTE OBJECT HANDLER 
  *  convert External -> Internal
@@ -9,16 +9,25 @@ import { UnexpectedInternalError } from "../operation.exception"
 // This is CRDT Metadata
 export type SimpleAgentId = string
 export type SimpleExternalID = [ agent: SimpleAgentId, sequence: number ]
+// This is CRDT Objects
+export type SimpleExternalItem = [id: SimpleExternalID, originLeft: SimpleExternalID | null, originRight: SimpleExternalID | null, content: string, deleted: boolean]
 // Payload of the datastructure
 export function get_external_item_content(item: SimpleExternalItem): string { return item[3] }
 export function get_external_item_deletion_flag(item: SimpleExternalItem): boolean { return item[4] }
+export function set_external_item_deletion_flag(item: SimpleExternalItem, status: boolean): SimpleExternalItem { 
+  return [
+    get_external_item_id(item),
+    get_external_item_origin_left_id(item),
+    get_external_item_origin_right_id(item),
+    get_external_item_content(item),
+    status,
+  ] 
+}
 // CRDT metadata
 export function get_external_item_id(item: SimpleExternalItem): SimpleExternalID { return item[0] }
 export function get_external_item_origin_left_id(item: SimpleExternalItem): SimpleExternalID | null { return item[1] }
 export function get_external_item_origin_right_id(item: SimpleExternalItem): SimpleExternalID | null { return item[2] }
 
-// This is CRDT Objects
-export type SimpleExternalItem = [id: SimpleExternalID, originLeft: SimpleExternalID | null, originRight: SimpleExternalID | null, content: string, deleted: boolean]
 // This is CRDT Tracking Map
 export type SimpleVersion = Record<SimpleAgentId, number>
 
@@ -41,9 +50,8 @@ export function find_item_position_with_id(doc: SimpleInternalArray, id: SimpleE
   throw new UnexpectedInternalError("Can't find item")
 }
 
-
 // finding external item in the logs, in the original will be the content[i]
-export function find_external_item_at_position(doc: SimpleInternalArray, position: number): SimpleExternalItem | null {
+export function find_item_at_internal_position(doc: SimpleInternalArray, position: number): SimpleExternalItem | null {
   if (position > doc.content.length) {
     throw new UnexpectedInternalError("Out of index in array")
   }
@@ -87,7 +95,7 @@ export function find_position_to_integrate_external_item(doc: SimpleInternalArra
   for (let current_scanning_position = destination_position; current_scanning_position < right; current_scanning_position++) {
     if (!scanning) destination_position = current_scanning_position;
 
-    let current_item = find_external_item_at_position(doc, current_scanning_position)
+    let current_item = find_item_at_internal_position(doc, current_scanning_position)
     if (!current_item) continue
     let current_item_left_position = find_item_position_with_id(doc, get_external_item_id(current_item)) ?? -1
     const item_right_id = get_external_item_origin_right_id(current_item)
@@ -108,14 +116,6 @@ export function find_position_to_integrate_external_item(doc: SimpleInternalArra
 
   return destination_position
 }
-
-// Convert EO --> IO in PHASE 2
-
-
-/** LOCAL OBJECT HANDLER 
- *  convert Internal into External, that used for:
- *  + propogate operator
-*/
 
 // This is the id for continous array
 export type SimpleInternalID = number;
@@ -143,18 +143,108 @@ export function insert_item_with_position(doc: SimpleInternalArray, item: Simple
 
 // some Internal Operation & Internal State
 // this is only used for local handler, when user use the text cursor on the editor
-export function find_item_at_internal_position(doc: SimpleInternalArray, position: number, stickEnd: boolean = false): number {
+export function convert_external_position_to_internal_position(doc: SimpleInternalArray, position: number, stickEnd: boolean = false): number {
   let i = 0;
   for (; i < doc.content.length; i++) {
     const item = doc.content[i]
-    if (stickEnd && position === 0) return i
-    else if (!item) continue
+    
+    if (!item) continue
+    else if (stickEnd && position === 0) return i
     else if (get_external_item_deletion_flag(item)) continue
     else if (position === 0) return i
-
+    
     position--
   }
-
+  
   if (position === 0) return i
   else throw new UnexpectedInternalError('Past end of the document')
 }
+
+/** LOCAL OBJECT HANDLER 
+ *  convert Internal into External, that used for:
+ *  + propogate operator
+*/
+
+
+function localInsertOne(doc: SimpleInternalArray, agent: string, pos: number, text: string): SimpleInternalArray  {
+  // let seq = 0
+  // if (doc.version[agent] != null) {
+  //   seq = doc.version[agent] + 1
+  // }
+
+  // Explain why not this left?, because we are insert from left to right, so the pivot should be the right (which mean exist the left already)
+  // Which mean shift the array into right
+  // If not, the left (which is the current checked item) is null
+  // const left_item_position = convert_external_position_to_internal_position(doc, pos, true)
+  // const left_item = find_item_at_internal_position(doc, left_item_position)
+  // const right_item = left_item_position + 1> doc.content.length ? null : find_item_at_internal_position(doc, left_item_position + 1)
+
+
+  const right_item_position = convert_external_position_to_internal_position(doc, pos, true)
+  const left_item = right_item_position > 0 ? find_item_at_internal_position(doc, right_item_position - 1) : null
+  const right_item = find_item_at_internal_position(doc, right_item_position) ?? null
+
+  const seq = (doc.version[agent] ?? -1) + 1
+  const new_item: SimpleExternalItem = [
+    [agent, seq],
+    left_item ? get_external_item_id(left_item) : null,
+    right_item ? get_external_item_id(right_item) : null,
+    text,
+    false,
+  ]
+  const insert_pos = find_position_to_integrate_external_item(doc, new_item)
+  doc.content.splice(insert_pos, 0, new_item)
+  return doc
+}
+
+function localInsert(doc: SimpleInternalArray, agent: string, pos: number, text: string): SimpleInternalArray {
+  const content = [...text]
+  for (const c of content) {
+    localInsertOne(doc, agent, pos, c)
+    pos++
+  }
+  return doc
+}
+
+function localDelete(doc: SimpleInternalArray, pos: number, delLen: number) {
+  while (delLen > 0) {
+    const idx = convert_external_position_to_internal_position(doc, pos, false)
+    const item = doc.content[idx]
+    if(item) set_external_item_deletion_flag(item, true )
+    delLen--
+  }
+
+  return doc
+}
+
+// utils
+function create_random_string(n: number): string {
+  let res = ''
+  for (let i = 0; i < n - 1; i++) res += String.fromCharCode('a'.charCodeAt(0) + Math.floor(Math.random() * 26))
+
+  return res + '.'
+}
+
+
+const doc1 = create_simple_doc()
+const id: SimpleAgentId = 'agent-1'
+let r = create_random_string(4)
+localInsert(doc1, id, 0, r)
+console.log(`should have this:`, r)
+console.log(`${id} has content:`, get_content(doc1))
+console.table(doc1.content)
+
+r = create_random_string(4)
+localInsert(doc1, id, 0, r)
+console.log(`should have this:`, r)
+
+r = create_random_string(4)
+localInsert(doc1, id, 0, r)
+console.log(`should have this:`, r)
+
+r = create_random_string(4)
+localInsert(doc1, id, 0, r)
+console.log(`should have this:`, r)
+
+console.table(doc1.content)
+console.log(`${id} has content:`, get_content(doc1))
