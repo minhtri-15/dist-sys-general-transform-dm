@@ -1,19 +1,19 @@
-export interface CRDTLibrary<InternalState, Value, InternalOperator, ExternalOperator> {
+export interface CRDTLibrary<InternalState, Value, Internaloperation, Externaloperation> {
   initialize_state(): InternalState
   get_value(state: InternalState): Value
 
-  // Local Operator Handler (LOH)
-  update(localOperator: InternalOperator, state: InternalState): InternalState
+  // Local operation Handler (LOH)
+  update(localoperation: Internaloperation, state: InternalState): InternalState
 
   //// Helpers
   equal(state1: InternalState, state2: InternalState): boolean
   
-  // Remote Operator Handlers (ROH)
-  downstream(remoteOperator: ExternalOperator, state: InternalState): InternalOperator 
-  require_state_downstream(remoteOperation: ExternalOperator): boolean
+  // Remote operation Handlers (ROH)
+  downstream(remoteoperation: Externaloperation, state: InternalState): Internaloperation 
+  require_state_downstream(remoteOperation: Externaloperation): boolean
   
   //// Helpers
-  is_operation(operator: unknown): boolean
+  is_operation(operation: unknown): boolean
   
 }
 
