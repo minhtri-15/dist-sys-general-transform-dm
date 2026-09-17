@@ -203,18 +203,19 @@ export class SimpleRGArrayCRDT implements CRDTLibrary<
     switch (type) {
       case "insert": 
       let left_id: SimpleExternalID | null = null, right_id: SimpleExternalID | null  = null
+      const left_item = io_position - 1 >= 0 ? get_item_at_internal_position(state, io_position - 1): null
+      const right_item = io_position < state.operation_log.length - 1 ? get_item_at_internal_position(state, io_position) : null
+
       return {
         type: 'insert', 
         len: info.length,
         items: info.split('').map((char_item, idx): SimpleRGAInternalStateItem<string> => {
           if(idx === 0) {
-            const left_item = io_position - 1 >= 0 ? get_item_at_internal_position(state, io_position - 1): null
             left_id = left_item ? get_item_id(left_item) : null
           }
           
           if(idx === info.length - 1)
           {
-            const right_item = io_position < state.operation_log.length - 1 ? get_item_at_internal_position(state, io_position) : null
             right_id = right_item ? get_item_id(right_item) : null
           } else if (idx < info.length - 1) {
             right_id = [id[0], id[1] + idx + 1]
