@@ -38,7 +38,7 @@ function convert_eo_position_to_io_position(external_position: number, state: Si
 }
 
 function conver_eo_len_to_io_len(start_external_position: number, external_len: number, state: SimpleRGAInternalState<any>): number {
-  let ex_len = 0;
+  let ex_len = external_len;
   let start = convert_eo_position_to_io_position(start_external_position, state);
 
   let len = 0
@@ -91,7 +91,7 @@ function find_internal_position_to_insert<T>(item: SimpleRGAInternalStateItem<T>
 function delete_item_at_internal_position_with_len(start_internal_position: number, len: number, state: SimpleRGAInternalState<any>): SimpleRGAInternalState<any> {
   if (start_internal_position < 0 || start_internal_position >= state.operation_log.length) return state
 
-  for (let i = start_internal_position; i < Math.min(state.operation_log.length, len); i++) {
+  for (let i = start_internal_position; i < Math.min(state.operation_log.length, start_internal_position + len); i++) {
     state.operation_log[i] = [
       state.operation_log[i]!![0], state.operation_log[i]!![1], state.operation_log[i]!![2],
       true,
@@ -233,13 +233,14 @@ export class SimpleRGArrayCRDT implements CRDTLibrary<
         return {
           type: 'delete', 
           len: conver_eo_len_to_io_len(start_pos, info, state),
-          start_pos: start_pos
+          start_pos: io_position
         }
     }
   }
   
-  require_state_downstream(remoteOperation: SimpleRGAExternalOperation): boolean {
-    return true; // need to check the operation is in version or not
+  require_state_downstream(remote_operation: SimpleRGAExternalOperation): boolean {
+    const [_, type, __] = remote_operation;
+    return type === 'insert' || type === 'delete'; // need to check the operation is in version or not
   }
   
   is_operation(operation: unknown): operation is SimpleRGAExternalOperation {

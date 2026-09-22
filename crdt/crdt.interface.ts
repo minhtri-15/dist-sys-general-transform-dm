@@ -9,8 +9,8 @@ export interface CRDTLibrary<InternalState, Value, Internaloperation, Externalop
   equal(state1: InternalState, state2: InternalState): boolean
   
   // Remote operation Handlers (ROH)
-  downstream(remoteoperation: Externaloperation, state: InternalState): Internaloperation 
-  require_state_downstream(remoteOperation: Externaloperation): boolean
+  downstream(remote_operation: Externaloperation, state: InternalState): Internaloperation 
+  require_state_downstream(remote_operation: Externaloperation): boolean
   
   //// Helpers
   is_operation(operation: unknown): boolean

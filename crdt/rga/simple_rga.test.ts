@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import { apply_remote_operation } from "../test.util.ts";
 import { SimpleRGArrayCRDT, type SimpleRGAExternalOperation, type SimpleRGAInternalOperation, type SimpleRGAInternalState } from "./simple_rga.ts";
 
@@ -19,30 +20,109 @@ function gen_ran_content(n: number): string {
   return res + '.'
 }
 
-let state = crdt.initialize_state()
-const id1 = get_id()
-let seq = 0
+function test() {
+  return
+  let state = crdt.initialize_state()
+  const id1 = get_id()
+  let seq = 0
 
-let r = gen_ran_content(3)
-console.log('Should have this: ', r)
-state = apply_remote_operation<SimpleRGAInternalState<string>, string,  SimpleRGAInternalOperation<string>, SimpleRGAExternalOperation> 
-  ([[id1, seq], 'insert', 0, r], state, crdt)
-seq += 3
-console.log(crdt.get_value(state))
-console.table(state.operation_log)
+  let r = gen_ran_content(3)
+  // console.log('Should have this: ', r)
+  state = apply_remote_operation<SimpleRGAInternalState<string>, string,  SimpleRGAInternalOperation<string>, SimpleRGAExternalOperation> 
+    ([[id1, seq], 'insert', 0, r], state, crdt)
+  seq += 3
+  // console.log(crdt.get_value(state))
+  // console.table(state.operation_log)
 
-r = gen_ran_content(3)
-console.log('Should have this: ', r)
-state = apply_remote_operation<SimpleRGAInternalState<string>, string,  SimpleRGAInternalOperation<string>, SimpleRGAExternalOperation> 
-  ([[id1, seq], 'insert', 0, r], state, crdt)
-seq += 3
-console.log(crdt.get_value(state))
-console.table(state.operation_log)
+  r = gen_ran_content(3)
+  // console.log('Should have this: ', r)
+  state = apply_remote_operation<SimpleRGAInternalState<string>, string,  SimpleRGAInternalOperation<string>, SimpleRGAExternalOperation> 
+    ([[id1, seq], 'insert', 0, r], state, crdt)
+  seq += 3
+  // console.log(crdt.get_value(state))
+  // console.table(state.operation_log)
 
-r = gen_ran_content(3)
-console.log('Should have this: ', r)
-state = apply_remote_operation<SimpleRGAInternalState<string>, string,  SimpleRGAInternalOperation<string>, SimpleRGAExternalOperation> 
-  ([[id1, seq], 'insert', 3, r], state, crdt)
-seq += 3
-console.log(crdt.get_value(state))
-console.table(state.operation_log)
+  r = gen_ran_content(3)
+  // console.log('Should have this: ', r)
+  state = apply_remote_operation<SimpleRGAInternalState<string>, string,  SimpleRGAInternalOperation<string>, SimpleRGAExternalOperation> 
+    ([[id1, seq], 'insert', 3, r], state, crdt)
+  seq += 3
+
+  
+  state = apply_remote_operation<SimpleRGAInternalState<string>, string,  SimpleRGAInternalOperation<string>, SimpleRGAExternalOperation> 
+    ([[id1, seq], 'delete', 3, 3], state, crdt)
+  seq += 1
+
+  // console.log(crdt.get_value(state))
+  console.table(state.operation_log) 
+}
+
+describe("CounterBoundedCRDT", () => {
+  it("test initialize empty state", () => {
+    const state = crdt.initialize_state();
+    expect(state.operation_log.length).toBe(0);
+  });
+
+  it("test local insert", () => {
+    let state = crdt.initialize_state()
+    const id1 = get_id()
+    let seq = 0
+
+    let checked_result = ""
+    let r = ""
+
+    r = gen_ran_content(3)
+    state = apply_remote_operation<SimpleRGAInternalState<string>, string,  SimpleRGAInternalOperation<string>, SimpleRGAExternalOperation> 
+      ([[id1, seq], 'insert', 0, r], state, crdt)
+    seq += 3
+    checked_result = r + checked_result
+
+    r = gen_ran_content(3)
+    state = apply_remote_operation<SimpleRGAInternalState<string>, string,  SimpleRGAInternalOperation<string>, SimpleRGAExternalOperation> 
+      ([[id1, seq], 'insert', 0, r], state, crdt)
+    seq += 3
+    checked_result = r + checked_result
+
+    r = gen_ran_content(3)
+    state = apply_remote_operation<SimpleRGAInternalState<string>, string,  SimpleRGAInternalOperation<string>, SimpleRGAExternalOperation> 
+      ([[id1, seq], 'insert', 0, r], state, crdt)
+    seq += 3
+    checked_result = r + checked_result
+
+    expect(crdt.get_value(state)).toBe(checked_result)
+  })
+
+  it("test local insert", () => {
+    let state = crdt.initialize_state()
+    const id1 = get_id()
+    let seq = 0
+
+    let checked_result = ""
+    let r = ""
+
+    r = gen_ran_content(3)
+    state = apply_remote_operation<SimpleRGAInternalState<string>, string,  SimpleRGAInternalOperation<string>, SimpleRGAExternalOperation> 
+      ([[id1, seq], 'insert', 0, r], state, crdt)
+    seq += 3
+    checked_result = r + checked_result
+
+    r = gen_ran_content(3)
+    state = apply_remote_operation<SimpleRGAInternalState<string>, string,  SimpleRGAInternalOperation<string>, SimpleRGAExternalOperation> 
+      ([[id1, seq], 'insert', 0, r], state, crdt)
+    seq += 3
+    // checked_result = r + checked_result
+
+    r = gen_ran_content(3)
+    state = apply_remote_operation<SimpleRGAInternalState<string>, string,  SimpleRGAInternalOperation<string>, SimpleRGAExternalOperation> 
+      ([[id1, seq], 'insert', 0, r], state, crdt)
+    seq += 3
+    checked_result = r + checked_result
+
+    state = apply_remote_operation<SimpleRGAInternalState<string>, string,  SimpleRGAInternalOperation<string>, SimpleRGAExternalOperation> 
+      ([[id1, seq], 'delete', 3, 3], state, crdt)
+    seq += 3
+
+    expect(crdt.get_value(state)).toBe(checked_result)
+  })
+
+})

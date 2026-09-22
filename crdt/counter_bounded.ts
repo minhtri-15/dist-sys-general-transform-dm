@@ -114,8 +114,8 @@ export class CounterBoundedCRDT implements CRDTLibrary<CounterBoundedInternalSta
     );
   }
 
-  downstream(remoteOperation: CounterBoundedOperation, state: CounterBoundedInternalState): CounterBoundedOperation {
-    const [actor_id, type, value, to_id] = remoteOperation;
+  downstream(remote_operation: CounterBoundedOperation, state: CounterBoundedInternalState): CounterBoundedOperation {
+    const [actor_id, type, value, to_id] = remote_operation;
     if (!Number.isInteger(value) || value <= 0) {
       throw new InvalidOperationError("Operation value must be a positive integer");
     }
@@ -125,8 +125,8 @@ export class CounterBoundedCRDT implements CRDTLibrary<CounterBoundedInternalSta
     return [actor_id, 'increment', value]
   }
 
-  require_state_downstream(remoteOperation: CounterBoundedOperation): boolean {
-    const [_, type, ] = remoteOperation
+  require_state_downstream(remote_operation: CounterBoundedOperation): boolean {
+    const [_, type, ] = remote_operation
     return type !== 'increment'
   }
 
